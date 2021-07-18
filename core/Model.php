@@ -2,7 +2,10 @@
 
 namespace Core;
 
-class Model
+abstract class Model extends QueryBuilder
 {
-
+    public function save()
+    {
+        
+    }
 }

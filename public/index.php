@@ -1,26 +1,11 @@
 <?php
 
-use Core\Router;
+use Core\Bootstrap;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/core/helpers.php';
+require dirname(__DIR__) . '/routes/web.php';
 
-/*error_reporting(E_ALL);
-set_error_handler('\Core\Error::errorHandler');
-set_exception_handler('\Core\Error::exceptionHandler');
-register_shutdown_function('\Core\Error::fatalShutdown');*/
+$app = new Bootstrap();
 
-$dotEnv = new \Core\DotEnv(dirname(__DIR__) . '/.env');
-$dotEnv->load();
-
-$router = new Router();
-
-$router->add('/', ['controller' => 'HomeController', 'action' => 'index', 'method' => 'get']);
-$router->get('/login', ['controller' => 'HomeController', 'action' => 'index']);
-$router->post('/login', ['controller' => 'HomeController', 'action' => 'index']);
-$router->post('/logout', ['controller' => 'HomeController', 'action' => 'index']);
-
-try {
-    $router->dispatch($_SERVER['QUERY_STRING']);
-} catch (Exception $e) {
-    echo $e->getMessage();
-}
+$app->run();

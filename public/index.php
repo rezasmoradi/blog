@@ -1,10 +1,8 @@
 <?php
 
-require '../core/Router.php';
+use Core\Router;
 
-spl_autoload_register(function ($className) {
-    require $className . '.php';
-});
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 $router = new Router();
 

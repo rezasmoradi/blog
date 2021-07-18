@@ -1,7 +1,9 @@
 <?php
 
-require_once '../core/Controller.php';
-require_once '../core/View.php';
+namespace App\Controllers;
+
+use Core\Controller;
+use Core\View;
 
 class HomeController extends Controller
 {
@@ -9,6 +11,5 @@ class HomeController extends Controller
     {
         View::render('home', ['title' => 'Home']);
     }
-
 
 }

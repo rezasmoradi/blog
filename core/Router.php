@@ -1,6 +1,8 @@
 <?php
 
-require '../app/controllers/HomeController.php';
+namespace Core;
+
+use Exception;
 
 class Router
 {

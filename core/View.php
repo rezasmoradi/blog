@@ -1,5 +1,8 @@
 <?php
 
+namespace Core;
+
+use Exception;
 
 class View
 {
@@ -9,10 +12,14 @@ class View
 
         $file = dirname(__DIR__) . '/app/views/' . $view . '.php';
 
-        if (is_readable($file)) {
-            require $file;
-        } else {
-            throw new Exception('View ' . $file . ' not found');
+        try {
+            if (is_readable($file)) {
+                require $file;
+            } else {
+                throw new Exception('View ' . $file . ' not found');
+            }
+        } catch (Exception $e) {
+            echo $e->getMessage();
         }
     }
 }

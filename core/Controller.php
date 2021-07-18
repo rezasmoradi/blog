@@ -1,5 +1,8 @@
 <?php
 
+namespace Core;
+
+use Exception;
 
 class Controller
 {

@@ -4,5 +4,8 @@
       "App\\": "app/",
       "Core\\": "core/"
     }
+  },
+  "require": {
+    "eftec/bladeone": "^3.52"
   }
 }

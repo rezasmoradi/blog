@@ -20,7 +20,14 @@ class Router
 
         $route = '/^' . $route . '\/?$/i';
 
-        $this->routes[$route] = $params;
+        $method = 'GET';
+
+        if (gettype($params) === 'array') {
+            $method = array_key_exists('method', $params) ? strtoupper($params['method']) : 'GET';
+            unset($params['method']);
+        }
+
+        $this->routes[$route][$method] = $params;
     }
 
     public function __call($name, $args)

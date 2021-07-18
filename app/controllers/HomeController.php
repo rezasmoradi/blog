@@ -9,7 +9,12 @@ class HomeController extends Controller
 {
     public function index()
     {
-        View::render('home', ['title' => 'Home']);
+        View::renderTemplate('home', ['title' => 'Home']);
+    }
+
+    public function login()
+    {
+        
     }
 
 }

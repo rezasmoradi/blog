@@ -24,7 +24,7 @@ class View
         }
     }
 
-    public function renderTemplate($view, $args = [])
+    public static function renderTemplate($view, $args = [])
     {
         $views = dirname(__DIR__) . '/app/views';
         $cache = dirname(__DIR__) . '/storage/cache';

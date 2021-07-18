@@ -6,7 +6,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $router = new Router();
 
-$router->add('/', ['controller' => 'HomeController', 'action' => 'index']);
+$router->add('/', ['controller' => 'HomeController', 'action' => 'index', 'method' => 'get']);
 $router->get('/login', ['controller' => 'HomeController', 'action' => 'index']);
 $router->post('/login', ['controller' => 'HomeController', 'action' => 'index']);
 $router->post('/logout', ['controller' => 'HomeController', 'action' => 'index']);

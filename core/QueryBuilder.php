@@ -6,11 +6,11 @@ namespace Core;
 
 use PDO;
 
-class QueryBuilder extends PDO
+class QueryBuilder
 {
     protected static $connection = null;
     protected static $model = '';
-    protected $table = '';
+    protected string $table = '';
     protected static $sql = '';
     protected static $conditions = [];
     protected static $conditionString = '';
@@ -18,19 +18,15 @@ class QueryBuilder extends PDO
     public function __construct()
     {
         if (is_null(self::$connection)) {
-            $dsn = 'mysql:host=localhost;dbname=blog;charset=utf8';
-
-            try {
-                self::$connection = new PDO($dsn, 'root', '');
-            } catch (\PDOException $exception) {
-                echo 'Connection failed! ' . $exception->getMessage();
-            }
+            self::$connection = DB::getInstance();
         }
 
         return self::$connection;
     }
 
     /**
+     * get mysql connection
+     *
      * @return null|PDO
      */
     public function getConnection()
@@ -39,6 +35,7 @@ class QueryBuilder extends PDO
     }
 
     /**
+     *
      * @return QueryBuilder
      */
     public static function builder()

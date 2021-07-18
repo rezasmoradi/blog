@@ -6,13 +6,13 @@ use Exception;
 
 class Router
 {
-    protected $routes = [];
+    protected static $routes = [];
 
-    protected $params = [];
+    protected static $params = [];
 
-    protected $namespace = 'App\Controllers\\';
+    protected static $namespace = 'App\\Controllers\\';
 
-    public function add($route, $params = [])
+    public static function add($route, $params = [])
     {
         $route = preg_replace('/^\//', '', $route);
         $route = preg_replace('/\//', '\\/', $route);
@@ -27,10 +27,10 @@ class Router
             unset($params['method']);
         }
 
-        $this->routes[$route][$method] = $params;
+        self::$routes[$route][$method] = $params;
     }
 
-    public function __call($name, $args)
+    public static function __callStatic($name, $args)
     {
         if (gettype($args[1]) === 'object') {
             self::add($args[0], $args[1]);
@@ -42,7 +42,7 @@ class Router
 
     public function match($url)
     {
-        foreach ($this->routes as $route => $params) {
+        foreach (self::$routes as $route => $params) {
             if (preg_match($route, $url, $matches)) {
                 if ($method = $this->checkMethod(array_keys($params))) {
                     $this->setParams($matches, $params[$method]);
@@ -53,6 +53,10 @@ class Router
         return false;
     }
 
+    /**
+     * @param array $methods
+     * @return bool
+     */
     private function checkMethod($methods)
     {
         if (count($methods) > 1) {
@@ -67,6 +71,12 @@ class Router
         return false;
     }
 
+    /**
+     * @param array $matches
+     * @param array|\Closure $params
+     *
+     * @return void
+     */
     private function setParams($matches, $params)
     {
         foreach ($matches as $key => $match) {
@@ -74,33 +84,70 @@ class Router
                 $params['params'][$key] = $match;
             }
         }
-        $this->params = $params;
+        self::$params = $params;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRoutes()
+    {
+        return self::$routes;
+    }
+
+    /**
+     * @return array
+     */
+    public function getParams()
+    {
+        return self::$params;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNamespace()
+    {
+
+        if (array_key_exists('namespace', self::$params)) {
+            self::$namespace .= self::$params['namespace'] . '\\';
+        }
+
+        return self::$namespace;
     }
 
     public function dispatch($url)
     {
-        $url = $this->removeVariablesOfQueryString($url);
+        $url = $this->removeQueryStringVariables($url);
 
         if ($this->match($url)) {
-            $controller = $this->params['controller'];
-            $controller = $this->getNamespace() . $controller;
-
-            if (class_exists($controller)) {
-                $obj = new $controller($this->params);
-
-                $action = $this->params['action'];
-                $obj->$action();
+            if (is_callable(self::$params)) {
+                call_user_func(self::$params);
             } else {
-                throw new Exception("Controller class $controller not found!");
+                $controller = self::$params['controller'];
+                $controller = $this->getNamespace() . $controller;
+
+                if (class_exists($controller)) {
+                    $controller_object = new $controller(self::$params);
+
+                    $action = self::$params['action'];
+
+                    unset(self::$params['controller'], self::$params['action']);
+
+                        $controller_object->$action(new Request($this->getParams()));
+                } else {
+                    throw new Exception("Controller class $controller not found");
+                }
             }
         } else {
-            throw new Exception('Route not matched!');
+            throw new Exception('No route matched!', 404);
         }
+
     }
 
-    public function removeVariablesOfQueryString($url)
+    protected function removeQueryStringVariables($url)
     {
-        if ($url !== '') {
+        if ($url != '') {
             $parts = explode('&', $url, 2);
             if (strpos($parts[0], '=') === false) {
                 $url = $parts[0];
@@ -110,30 +157,5 @@ class Router
         }
 
         return $url;
-    }
-
-    public function getNamespace()
-    {
-        if (array_key_exists('namespace', $this->params)) {
-            $this->namespace .= $this->params['namespace'];
-        }
-
-        return $this->namespace;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRoutes()
-    {
-        return $this->routes;
-    }
-
-    /**
-     * @return array
-     */
-    public function getParams()
-    {
-        return $this->params;
     }
 }

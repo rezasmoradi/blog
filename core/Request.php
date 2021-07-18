@@ -1,15 +1,18 @@
 <?php
 
-
 namespace Core;
 
+use App\Models\User;
 
 class Request
 {
+    public $isApi;
     protected $params = [];
 
     public function __construct($routeParams)
     {
+        $this->isApi = preg_match('/^api/', $_SERVER['QUERY_STRING']);
+
         if ($routeParams) {
             $this->params = $routeParams['params'];
         }
@@ -50,8 +53,12 @@ class Request
      */
     public function post($requests = ['*'])
     {
-
-        return $this->checkRequests($requests, $_POST);
+        if ($this->isApi) {
+            $apiRequests = json_decode(file_get_contents('php://input'), true);
+            return $this->checkRequests($requests, $apiRequests);
+        } else {
+            return $this->checkRequests($requests, $_POST);
+        }
     }
 
     /**
@@ -85,5 +92,13 @@ class Request
             default:
                 return null;
         }
+    }
+
+    public function user()
+    {
+        if ($user = json_decode(Session::get('user'))) {
+            return User::builder()->find($user->id);
+        }
+        return null;
     }
 }

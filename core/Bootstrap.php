@@ -13,9 +13,9 @@ class Bootstrap
     public function __construct($timezone = 'Asia/Tehran')
     {
             error_reporting(E_ALL);
-//            set_error_handler([Error::class, 'errorHandler']);
-//            set_exception_handler([Error::class, 'exceptionHandler']);
-//            register_shutdown_function([Error::class, 'fatalShutdown']);
+            set_error_handler([Error::class, 'errorHandler']);
+            set_exception_handler([Error::class, 'exceptionHandler']);
+            register_shutdown_function([Error::class, 'fatalShutdown']);
 
 
         date_default_timezone_set($timezone);

@@ -4,6 +4,4 @@ vendor
 
 composer.lock
 
-storage
-
 .env

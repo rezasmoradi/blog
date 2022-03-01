@@ -6,16 +6,35 @@ use App\Models\User;
 
 class Request
 {
-    public $isApi;
-    protected $params = [];
+    public bool $isApi;
+    protected static array $params = [];
+    private ?\Nyholm\Psr7\Request $request = null;
 
-    public function __construct($routeParams)
+    public function __construct()
     {
-        $this->isApi = preg_match('/^api/', $_SERVER['QUERY_STRING']);
+        $this->request = new \Nyholm\Psr7\Request($_SERVER['REQUEST_METHOD'], getenv('APP_URL') . $_SERVER['REQUEST_URI'], headers_list());
 
-        if ($routeParams) {
-            $this->params = $routeParams['params'];
-        }
+        $this->isApi = preg_match('/^api/', $_SERVER['QUERY_STRING']);
+    }
+
+    public static function build($params = [])
+    {
+        self::$params = $params;
+    }
+
+    public function method()
+    {
+        return $_SERVER['REQUEST_METHOD'];
+    }
+
+    public function acceptEncoding()
+    {
+        return $_SERVER['HTTP_ACCEPT_ENCODING'];
+    }
+
+    public function headers()
+    {
+        return get_headers(getenv('APP_URL'), true);
     }
 
     /**
@@ -35,16 +54,38 @@ class Request
         if (!empty($_FILES)) {
             $requests[] = $_FILES;
         }
+        $requests[] = $this->params;
         return $requests;
     }
 
     /**
-     * @param array|string $requests
+     * @param array|string $params
      * @return string|array|null
      */
-    public function get($requests = ['*'])
+    public function get($params = '*')
     {
-        return $this->checkRequests($requests, $_GET);
+        if ($params === '*') {
+            return self::$params;
+        } else {
+            return array_key_exists($params, self::$params) ? self::$params[$params] : null;
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function query()
+    {
+        $results = [];
+        $query = $this->request->getUri()->getQuery();
+        $args = explode('&', $query);
+        if ($args[0] !== '') {
+            foreach ($args as $arg) {
+                $param = explode('=', $arg);
+                $results[$param[0]] = $param[1];
+            }
+        }
+        return $results;
     }
 
     /**
@@ -55,7 +96,7 @@ class Request
     {
         if ($this->isApi) {
             $apiRequests = json_decode(file_get_contents('php://input'), true);
-            return $this->checkRequests($requests, $apiRequests);
+            return $apiRequests ? $this->checkRequests($requests, $apiRequests) : null;
         } else {
             return $this->checkRequests($requests, $_POST);
         }

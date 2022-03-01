@@ -3,31 +3,34 @@
 
 namespace Core;
 
-
-use PDO;
+use Bolt\protocol\AProtocol;
 
 class QueryBuilder
 {
-    protected static $connection = null;
-    protected static $model = '';
-    protected string $table = '';
-    protected static $sql = '';
-    protected static $conditions = [];
-    protected static $conditionString = '';
+    protected static ?AProtocol $connection = null;
+    protected static string $cypher = '';
+    protected static array $conditions = [];
+    protected static string $conditionString = '';
+    protected static array $fillable = [];
+    protected static string $paginate = '';
+    protected static array $matches = [];
+    protected static array $creates = [];
+    protected static array $relations = [];
+    protected static array $hidden = [];
+    protected static array $nodes = [];
+    protected string $label = '';
 
     public function __construct()
     {
-        if (is_null(self::$connection)) {
-            self::$connection = DB::getInstance();
-        }
+        self::$connection = DB::getInstance();
 
         return self::$connection;
     }
 
     /**
-     * get mysql connection
+     * get connection
      *
-     * @return null|PDO
+     * @return AProtocol
      */
     public function getConnection()
     {
@@ -42,126 +45,234 @@ class QueryBuilder
     {
         $builder = new QueryBuilder();
         $class = get_called_class();
-        self::$model = $class;
+        self::$fillable = get_class_vars($class)['fillables'];
 
         if (class_exists($class)) {
-            $builder->table = get_class_vars($class)['table'];
-        } else {
-            $builder->table = $class;
-            $class = explode(DIRECTORY_SEPARATOR, $builder->table);
-            $builder->table = lcfirst(end($class)) . 's';
+            $builder->label = get_class_vars($class)['label'];
         }
 
         return $builder;
     }
 
-    public function getTable()
+    public function getLabel()
     {
-        return $this->table;
+        return $this->label;
     }
 
-    public function toSql(): string
+    public function toCypher(): string
     {
-        return self::$sql;
+        if (empty(self::$matches) && empty(self::$creates)) {
+            return 'MATCH (' . 'n:' . $this->getLabel() . ') ' . self::$conditionString . self::$paginate;
+        } else {
+            $this->build();
+            return self::$cypher;
+        }
     }
 
     /**
-     * @param string|array $columns
-     * @return \stdClass
+     * @param string $node
+     * @param string $model
+     * @param array $conditions
+     * @param string $relCondition
+     * @return QueryBuilder
      */
-    public function first($columns = '*')
+    public function match($node, $model, $conditions, $relCondition = '')
     {
-        if ($columns !== '*' && is_array($columns)) {
-            $columns = implode(', ', $columns);
+        $params = [];
+        foreach ($conditions as $key => $condition) {
+            $params[] = $key . ':' . "\"{$condition}\"";
         }
-        if (!empty(self::$conditions)) {
-            self::$sql = 'SELECT ' . $columns . ' FROM ' . $this->getTable() . ' WHERE ' . self::$conditionString . ' LIMIT 1';
-        } else {
-            self::$sql = 'SELECT ' . $columns . ' FROM ' . $this->getTable() . ' LIMIT 1';
-        }
-        $stmt = $this->getConnection()->prepare(self::$sql);
-        $stmt->execute(self::$conditions);
 
-        return $stmt->fetchObject(self::$model);
+        self::$nodes[] = $node;
+        self::$matches[] = '(' . $node . ':' . $model . ' { ' . implode(', ', $params) . ' })' . $relCondition;
+        return $this;
     }
 
     /**
-     * @param string|array $columns
-     * @return array|null
+     * @param string $node
+     * @param string $model
+     * @param array $properties
+     * @param string $relation
+     * @return QueryBuilder
      */
-    public function get($columns = '*'): array
+    public function createConstraint($node, $model, $properties, $relation = '')
     {
-        if ($columns !== '*' && is_array($columns)) {
-            $columns = implode(', ', $columns);
+        $params = [];
+        $time = time();
+        if (!array_key_exists('uuid', $properties)) {
+            $params[] = 'uuid: apoc.create.uuid()';
         }
-        if (!empty(self::$conditions)) {
-            $sql = 'SELECT ' . $columns . ' FROM ' . $this->getTable() . ' WHERE ' . self::$conditionString;
+        $params[] = 'created_at: ' . $time;
+        $params[] = 'updated_at: ' . $time;
+        if (!empty($properties)) {
+            foreach ($properties as $key => $property) {
+                $params[] = $key . ':' . "\"{$property}\"";
+            }
+        }
+        self::$nodes[] = $node;
+        self::$creates[] = ' CREATE (' . $node . ':' . $model . ' { ' . implode(', ', $params) . '})' . $relation;
+        return $this;
+    }
+
+    public function createRelation($firstNode, $relation, $secondNode, $rel_properties = [])
+    {
+        $rel = '';
+        if (!empty($rel_properties)) {
+            $rel = '{ ';
+            $params = [];
+            $time = time();
+            $params[] = 'created_at: ' . $time;
+            $params[] = 'updated_at: ' . $time;
+            foreach ($rel_properties as $key => $property) {
+                $params[] = $key . ': ' . $property;
+            }
+            $rel .= implode(',', $params) . ' }';
+        }
+        self::$creates[] = ' CREATE (' . $firstNode . ')' . $relation . $rel. '(' . $secondNode . ')';
+        return $this;
+    }
+
+    /**
+     * @param string $properties
+     * @return object
+     */
+    public function first($properties = '*')
+    {
+        if (is_array($properties)) {
+            $props = [];
+            foreach ($properties as $property) {
+                $props[] = 'n.' . $property;
+            }
+            $props = implode(', ', $props);
         } else {
-            $sql = 'SELECT ' . $columns . ' FROM ' . $this->getTable();
+            $props = $properties === '*' ? 'n, r, b' : $properties;
         }
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->execute(self::$conditions);
+        if ($this->getLabel() === 'User') {
+            $props = 'n';
+            $query = $this->getLabel() . ')';
+        } else {
+            $query = $this->getLabel() . ')-[r]->(b) ';
+        }
+        self::$cypher = 'MATCH (n:' . $query . self::$conditionString . ' RETURN ' . $props;
+        $this->getConnection()->run(self::$cypher);
+        self::$conditionString = '';
+        self::$conditions = [];
+        return $this->getConnection()->pull();
+    }
 
-        self::$sql = $stmt->queryString;
+    /**
+     * @return array
+     */
+    public function get()
+    {
+        self::$cypher = 'MATCH (n:' . $this->getLabel() . ')-[r]->(b) ' . self::$conditionString . ' RETURN n,r,b' . self::$paginate;
+        $this->getConnection()->run(self::$cypher);
+        self::$conditionString = '';
+        self::$conditions = [];
+        return $this->getConnection()->pull();
+    }
 
-        return $stmt->fetchAll(PDO::FETCH_CLASS, self::$model);
+    /**
+     * @return QueryBuilder
+     */
+    public function build()
+    {
+        $matches = '';
+        $creates = '';
+        $rel = '';
+        if (!empty(self::$matches)) {
+            foreach (self::$matches as $key => $match) {
+                if (strpos($match, '(') === 0 && $key !== 0) {
+                    $matches .= ', ' . $match;
+                } else {
+                    $matches .= $match;
+                }
+            }
+            self::$cypher = 'MATCH ';
+        }
+        if (!empty(self::$creates)) {
+            $creates = implode(' ', self::$creates);
+        }
+        if (!empty(self::$relations)) {
+            $rel = ' MERGE ' . implode(', ', self::$relations);
+        }
+        self::$cypher .= $matches . $creates . $rel . self::$conditionString . self::$paginate;
+        return $this;
+    }
+
+    /**
+     * @param array|string $properties
+     * @return mixed
+     */
+    public function return($properties = '*')
+    {
+        if ($properties === '*' && !empty(self::$nodes)) {
+            $returns = implode(', ', self::$nodes);
+        } else {
+            $returns = is_array($properties) ? implode(', ', $properties) : $properties;
+        }
+        self::$cypher .= ' RETURN ' . $returns;
+
+        $this->getConnection()->run(self::$cypher);
+
+        self::$cypher = '';
+        self::$nodes = [];
+        self::$matches = [];
+        self::$creates = [];
+
+        return $this->getConnection()->pull()[0];
+    }
+
+    /**
+     * @param array $relations
+     * @return array
+     */
+    public function deleteRelation($relations)
+    {
+        self::$cypher .= ' DELETE ' . implode(', ', $relations);
+        $this->getConnection()->run(self::$cypher);
+        return $this->getConnection()->pull();
+    }
+
+    /**
+     * @param int $limit
+     * @param int $skip
+     * @return QueryBuilder
+     */
+    public function paginate($limit, $skip = 0)
+    {
+        if ($skip === 0) {
+            self::$paginate = ' LIMIT ' . $limit;
+        } else {
+            self::$paginate = ' SKIP ' . $skip . ' LIMIT ' . $limit;
+        }
+        return $this;
     }
 
     /**
      * @param array $values
-     * @return bool
-     */
-    public function create($values)
-    {
-        $keys = array_keys($values);
-        $columns = implode(', ', $keys);
-        $keys = array_map(function ($key) {
-            return ":$key";
-        }, $keys);
-
-        $valuesColumns = implode(', ', $keys);
-        $values = array_values($values);
-
-        self::$sql = 'INSERT INTO ' . $this->getTable() . "($columns) VALUES($valuesColumns)";
-        $stmt = $this->getConnection()->prepare(self::$sql);
-        foreach ($keys as $index => $key) {
-            $stmt->bindParam($key, $values[$index]);
-        }
-        return $stmt->execute();
-    }
-
-    /**
-     * @param array $values
-     * @return bool
+     * @return array
      */
     public function update($values)
     {
-        $valuesKeys = array_map(function ($key) {
-            return "$key=:$key";
-        }, array_keys($values));
-
-        $valuesColumns = implode(', ', $valuesKeys);
-
-        $cond = explode('=?', self::$conditionString);
-
-        if (!empty(self::$conditionString)) {
-            self::$sql = 'UPDATE ' . $this->getTable() . ' SET ' . $valuesColumns . ' WHERE ' . "{$cond[0]} = :{$cond[0]}";
-        } else {
-            self::$sql = 'UPDATE ' . $this->getTable() . ' SET ' . $valuesColumns;
+        DB::beginTransaction();
+        $params = [];
+        foreach ($values as $key => $value) {
+            if (in_array($key, self::$fillable)) {
+                $params[] = $key . ':' . "\"{$value}\"";
+            }
         }
+        $params[] = 'updated_at:' . time();
+        $params = implode(',', $params);
 
-        $stmt = $this->getConnection()->prepare(self::$sql);
-
-        foreach ($valuesKeys as $key => $valuesKey) {
-            $k = explode('=', $valuesKey);
-            $stmt->bindParam($k[1], array_values($values)[$key]);
-        }
-        $id = (int)self::$conditions[0];
-        $stmt->bindParam(":{$cond[0]}", $id);
-
-        self::$sql = $stmt->queryString;
-
-        return $stmt->execute();
+        $this->getConnection()->run($this->toCypher() . ' SET ' . self::$nodes[0] . ' += {' . $params . '} RETURN p');
+        $result = $this->getConnection()->pull();
+        DB::commit();
+        self::$cypher = '';
+        self::$matches = [];
+        self::$creates = [];
+        self::$nodes = [];
+        return $result[0][0]->properties();
     }
 
     /**
@@ -171,34 +282,35 @@ class QueryBuilder
      */
     public function where($filters, $aggregate = 'AND')
     {
-        foreach ($filters as $filterValue) {
-            self::$conditions[] = $filterValue;
+        self::$conditions = $filters;
+
+        $query = [];
+        foreach ($filters as $key => $filter) {
+            if (is_numeric($filter)) {
+                $query[] = 'n.' . $key . ' = ' . "\"$filter\"" . '';
+            } else {
+                $query[] = 'n.' . $key . ' =~ ' . "\"(?i)$filter\"" . '';
+            }
         }
 
-        $filterKeys = array_map(function ($key) {
-            return "$key=?";
-        }, array_keys($filters));
-
         if (count($filters) > 1) {
-            self::$conditionString = implode(" $aggregate ", $filterKeys);
+            self::$conditionString = ' WHERE ' . implode(" $aggregate ", $query);
         } else {
-            self::$conditionString = implode(' ', $filterKeys);
+            self::$conditionString = ' WHERE ' . implode(' ', $query);
         }
         return $this;
     }
 
-    public function delete()
+    /**
+     * @param array $nodes
+     * @return mixed
+     */
+    public function delete($nodes)
     {
-        if (!empty(self::$conditionString)) {
-            self::$sql = 'DELETE FROM ' . $this->getTable() . ' WHERE ' . self::$conditionString;
-        } else {
-            self::$sql = 'DELETE FROM ' . $this->getTable();
+        self::$cypher = $this->toCypher() . ' DETACH DELETE ' . implode(', ', $nodes);
 
-        }
-
-        $stmt = $this->getConnection()->prepare(self::$sql);
-
-        return $stmt->execute(!empty(self::$conditionString) ? self::$conditions : null);
+        $this->getConnection()->run(self::$cypher);
+        return $this->getConnection()->pull();
     }
 
     /**
@@ -207,23 +319,20 @@ class QueryBuilder
      */
     public function rawQuery($stmt)
     {
-        $stmt = $this->getConnection()->prepare($stmt);
-        $stmt->execute();
-        self::$sql = $stmt->queryString;
-        return $stmt->fetchAll(PDO::FETCH_OBJ);
+        $stmt = $this->getConnection()->run($stmt);
+        self::$cypher = $stmt;
+        return $this->getConnection()->pull();
     }
 
+    /**
+     * @param string $id
+     * @return array
+     */
     public function find($id)
     {
-        $sql = 'SELECT * FROM ' . $this->getTable() . ' WHERE :id=' . $id . ' LIMIT 1';
-
-        $stmt = $this->getConnection()->prepare($sql);
-        $stmt->bindParam(':id', $id);
-        self::$sql = $stmt->queryString;
-
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_CLASS, self::$model)[0];
+        self::$cypher = 'MATCH (n:' . $this->getLabel() . ' {uuid: ' . "\"$id\"" . '}) RETURN n';
+        $this->getConnection()->run(self::$cypher);
+        return $this->getConnection()->pull();
     }
 
     public function saveModel($model)
@@ -235,9 +344,7 @@ class QueryBuilder
             $model = array_slice($model, 2);
             return $this->update($model);
         } else {
-            return $this->create($model);
+            return $this->update($model);
         }
     }
-
-
 }

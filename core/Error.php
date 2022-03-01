@@ -10,8 +10,8 @@ class Error
 {
     public static function errorHandler($level, $message, $file, $line)
     {
-        if (error_reporting() !== 0) {
-            throw new \ErrorException($message, 0, $level, $file, $line);
+        if (error_reporting() !== 0 && getenv('SHOW_ERROR')) {
+            var_dump('error: ' .  $message,'file: '. $file, 'line: '. $line);
         }
     }
 
@@ -26,17 +26,17 @@ class Error
         }
         http_response_code($code);
 
-        if (getenv('SHOW_ERRORS')) {
+        if (getenv('SHOW_ERROR')) {
             echo "<h1>Fatal error</h1>";
             echo "<p>Uncaught exception: '" . get_class($exception) . "'</p>";
             echo "<p>Message: '" . $exception->getMessage() . "'</p>";
             echo "<p>Stack trace:<pre>" . $exception->getTraceAsString() . "</pre></p>";
             echo "<p>Thrown in '" . $exception->getFile() . "' on line " . $exception->getLine() . "</p>";
 
-            View::renderTemplate("errors/$code");
+//            View::renderTemplate("errors/$code");
 
         } else {
-            $log = dirname(__DIR__) . 'storage/logs/' . date('Y-m-d') . '.log';
+            $log = dirname(__DIR__) . '/storage/logs/' . date('Y-m-d') . '.log';
             ini_set('error_log', $log);
 
             $message = "Uncaught exception: '" . get_class($exception) . "'";
@@ -48,8 +48,8 @@ class Error
         }
     }
 
-    public function fatalShutdown()
+    public static function fatalShutdown()
     {
-        var_dump(error_get_last());
+        return error_get_last();
     }
 }

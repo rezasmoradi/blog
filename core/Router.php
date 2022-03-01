@@ -6,11 +6,11 @@ use Exception;
 
 class Router
 {
-    protected static $routes = [];
+    protected static array $routes = [];
 
-    protected static $params = [];
+    protected static array $params = [];
 
-    protected static $namespace = 'App\\Controllers\\';
+    protected static string $namespace = 'App\\Controllers\\';
 
     public static function add($route, $params = [])
     {
@@ -42,7 +42,7 @@ class Router
 
     public function match($url)
     {
-        foreach (self::$routes as $route => $params) {
+        foreach (self::getRoutes() as $route => $params) {
             if (preg_match($route, $url, $matches)) {
                 if ($method = $this->checkMethod(array_keys($params))) {
                     $this->setParams($matches, $params[$method]);
@@ -74,7 +74,6 @@ class Router
     /**
      * @param array $matches
      * @param array|\Closure $params
-     *
      * @return void
      */
     private function setParams($matches, $params)
@@ -118,31 +117,46 @@ class Router
 
     public function dispatch($url)
     {
-        $url = $this->removeQueryStringVariables($url);
-
-        if ($this->match($url)) {
-            if (is_callable(self::$params)) {
-                call_user_func(self::$params);
-            } else {
-                $controller = self::$params['controller'];
-                $controller = $this->getNamespace() . $controller;
-
-                if (class_exists($controller)) {
-                    $controller_object = new $controller(self::$params);
-
-                    $action = self::$params['action'];
-
-                    unset(self::$params['controller'], self::$params['action']);
-
-                        $controller_object->$action(new Request($this->getParams()));
+        if (strpos($url, '.') !== false) {
+            try {
+                header('Content-Type: ' . mime_content_type(app_disk($url)));
+                if (file_exists(app_disk($url))) {
+                    readfile(app_disk($url));
                 } else {
-                    throw new Exception("Controller class $controller not found");
+                    response(['message' => 'file not found'], 404);
                 }
+            } catch (\Exception $e) {
+                Log::error($e);
+                response(['message' => 'A error has occurred in the server'], 404);
             }
         } else {
-            throw new Exception('No route matched!', 404);
-        }
+            $url = $this->removeQueryStringVariables($url);
 
+            if ($this->match($url)) {
+                if (is_callable(self::$params)) {
+                    call_user_func(self::$params);
+                } else {
+                    self::$params['controller'] = $this->getNamespace() . self::$params['controller'];
+                    $controller = self::$params['controller'];
+
+                    if (class_exists($controller)) {
+                        $controller_object = new Controller();
+                        Request::build(self::$params['params']);
+
+                        $action = self::$params['action'];
+
+                        if ($controller_object->before() == true) {
+                            call_user_func_array([$controller_object, $action], $this->getParams());
+                            $controller_object->after();
+                        }
+                    } else {
+                        throw new Exception(sprintf('Controller class %s not found', $controller));
+                    }
+                }
+            } else {
+                throw new Exception('No route matched!', 404);
+            }
+        }
     }
 
     protected function removeQueryStringVariables($url)
@@ -154,8 +168,7 @@ class Router
             } else {
                 $url = '';
             }
+            return $url;
         }
-
-        return $url;
     }
 }

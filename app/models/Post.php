@@ -6,5 +6,18 @@ use Core\Model;
 
 class Post extends Model
 {
-    protected string $table = 'posts';
+    protected string $label = 'Post';
+
+    protected array $fillables = [
+        'uuid',
+        'caption',
+        'comment_allowed',
+        'created_at',
+        'updated_at'
+    ];
+
+    public function __construct($values = [])
+    {
+        parent::__construct($values);
+    }
 }

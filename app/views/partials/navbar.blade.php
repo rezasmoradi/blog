@@ -1,7 +1,17 @@
-<nav style="margin-top: 1rem;" class="container">
+<nav style="margin-top: 1rem;" class="container-fluid">
     <ul class="dropdown justify-content-around">
         <li>
             <a href="/" class="btn">خانه</a>
+        </li>
+        <li>
+            <div>
+                <button type="button" class="btn">جستجو
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                         class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </button>
+            </div>
         </li>
         @if($user = json_decode(\Core\Session::get('user')))
             <li>
@@ -66,109 +76,5 @@
                 <a href="/login" class="btn">ثبت&zwnj;نام</a>
             </li>
         @endif
-        <li>
-            <div class="btn">آموزش&zwnj;ها</div>
-            <!-- First level sub dropdown -->
-            <ul>
-                <li>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                             class="bi bi-chevron-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd"
-                                  d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                        </svg>
-                        PHP
-                    </div>
-                    <!-- Second level sub dropdown -->
-                    <ul style="background-color: #ce51c2;">
-                        <li>
-                            <a>Basic</a>
-                        </li>
-                        <li>
-                            <a>OOP</a>
-                        </li>
-                        <li>
-                            <a>MVC</a>
-                        </li>
-                        <li>
-                            <a>Laravel</a>
-                        </li>
-                    </ul>
-                </li>
-                <li>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                             class="bi bi-chevron-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd"
-                                  d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                        </svg>
-                        JS
-                    </div>
-                    <!-- Second level sub dropdown -->
-                    <ul style="background-color: #e2c741;">
-                        <li>
-                            <a>Basic</a>
-                        </li>
-                        <li>
-                            <a>ES</a>
-                        </li>
-                        <li>
-                            <a>JQuery</a>
-                        </li>
-                        <li>
-                            <a>React</a>
-                        </li>
-                        <li>
-                            <a>NodeJs</a>
-                        </li>
-                    </ul>
-                </li>
-                <li>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                             class="bi bi-chevron-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd"
-                                  d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                        </svg>
-                        Database
-                    </div>
-                    <!-- Second level sub dropdown -->
-                    <ul style="background-color: #e27741;">
-                        <li>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-chevron-right" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd"
-                                          d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                                </svg>
-                                SQL
-                            </div>
-                            <!-- Second level sub dropdown -->
-                            <ul style="background-color: #e27741;">
-                                <li>
-                                    <a>MySQL</a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-chevron-right" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd"
-                                          d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                                </svg>
-                                NoSQL
-                            </div>
-                            <!-- Second level sub dropdown -->
-                            <ul style="background-color: #e27741;">
-                                <li>
-                                    <a>MongoDB</a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
     </ul>
 </nav>
